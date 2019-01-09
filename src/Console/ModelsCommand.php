@@ -15,6 +15,7 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
 use Illuminate\Filesystem\Filesystem;
+use Log;
 use ReflectionClass;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
@@ -218,6 +219,7 @@ class ModelsCommand extends Command
                     $ignore[]              = $name;
                     $this->nullableColumns = [];
                 } catch (\Exception $e) {
+					Log::error($e);
                     $this->error("Exception: " . $e->getMessage() . "\nCould not analyze class $name.");
                 }
             }
@@ -549,6 +551,21 @@ class ModelsCommand extends Command
         $fkProp = $reflectionObj->getProperty('foreignKey');
         $fkProp->setAccessible(true);
 
+		if(is_array($fkProp->getValue($relation))) {
+            $true = 0;
+            foreach($fkProp->getValue($relation) as $value){
+                if(isset($this->nullableColumns[$value])) {
+                    $true++;
+                }
+            }
+
+            if($true == count($fkProp->getValue($relation))) {
+                return true;
+            }
+
+            return false;
+        }
+		
         return isset($this->nullableColumns[$fkProp->getValue($relation)]);
     }
 
